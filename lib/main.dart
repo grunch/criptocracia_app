@@ -8,10 +8,51 @@ import 'screens/elections_screen.dart';
 import 'screens/results_screen.dart';
 import 'screens/account_screen.dart';
 import 'services/nostr_key_manager.dart';
+import 'services/secure_storage_service.dart';
 import 'generated/app_localizations.dart';
 
-void main(List<String> args) {
+void main(List<String> args) async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Parse command line arguments
   AppConfig.parseArguments(args);
+  
+  try {
+    // Initialize secure storage
+    await SecureStorageService.init();
+    
+    // Initialize Nostr keys if needed
+    await NostrKeyManager.initializeKeysIfNeeded();
+  } catch (e) {
+    debugPrint('❌ Critical initialization error: $e');
+    // Show a simple error app
+    runApp(MaterialApp(
+      title: 'Criptocracia - Error',
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Initialization Error')),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Critical initialization error:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                e.toString(),
+                style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
+    return;
+  }
+  
   runApp(const CriptocraciaApp());
 }
 

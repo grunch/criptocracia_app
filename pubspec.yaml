@@ -36,15 +36,22 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-    
+
+  crypto: ^3.0.6
+  elliptic: ^0.3.11
+
   # RSA signatures
   blind_rsa_signatures:
     git:
       url: https://github.com/grunch/blind_rsa_signatures_dart.git
       ref: main
   # Nostr protocol
-  ndk: ^0.4.0
-  
+  dart_nostr: ^9.1.1
+  # Nip59
+  nip59:
+    git:
+      url: https://github.com/grunch/nip59-dart.git
+      ref: main
   # State management
   provider: ^6.1.2
   
@@ -54,9 +61,18 @@ dependencies:
   # Mnemonic generation and BIP39
   bip39: ^1.0.6
   
+  # Bech32 encoding for NIP-19
+  bech32: ^0.2.2
+  
+  # BIP32/BIP44 hierarchical deterministic key derivation
+  blockchain_utils: ^3.0.0
+  
   # Secure storage
-  flutter_secure_storage: ^9.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
   shared_preferences: ^2.3.3
+  device_info_plus: ^10.1.2
+  platform: ^3.1.5
   
   # Clipboard (built into Flutter SDK)
 

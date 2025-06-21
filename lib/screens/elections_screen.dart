@@ -5,6 +5,14 @@ import '../providers/election_provider.dart';
 import '../widgets/election_card.dart';
 import 'election_detail_screen.dart';
 import '../generated/app_localizations.dart';
+import '../services/nostr_service.dart';
+import '../services/nostr_key_manager.dart';
+import '../services/crypto_service.dart';
+import '../services/voter_session_service.dart';
+import '../config/app_config.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:blind_rsa_signatures/blind_rsa_signatures.dart';
 
 class ElectionsScreen extends StatefulWidget {
   const ElectionsScreen({super.key});
@@ -105,7 +113,7 @@ class _ElectionsScreenState extends State<ElectionsScreen> {
               final election = provider.elections[index];
               return ElectionCard(
                 election: election,
-                onTap: () => _navigateToElectionDetail(election),
+                onTap: () async => await _navigateToElectionDetail(election),
               );
             },
           );
@@ -114,12 +122,12 @@ class _ElectionsScreenState extends State<ElectionsScreen> {
     );
   }
 
-  void _navigateToElectionDetail(Election election) {
+  Future<void> _navigateToElectionDetail(Election election) async {
     if (election.status.toLowerCase() == 'open') {
-      debugPrint('Election is open, navigating to detail screen');
-      // Here we create the message to the EC with the blinded token
-      // and send it to the EC in a Nostr gift wrap event
+      await _requestBlindSignature(election);
     }
+
+    if (!mounted) return;
 
     Navigator.push(
       context,
@@ -127,5 +135,42 @@ class _ElectionsScreenState extends State<ElectionsScreen> {
         builder: (context) => ElectionDetailScreen(election: election),
       ),
     );
+  }
+
+  Future<void> _requestBlindSignature(Election election) async {
+    try {
+      final keys = await NostrKeyManager.getDerivedKeys();
+      final privKey = keys['privateKey'] as Uint8List;
+      final pubKey = keys['publicKey'] as Uint8List;
+
+      String bytesToHex(Uint8List b) =>
+          b.map((e) => e.toRadixString(16).padLeft(2, '0')).join();
+
+      final voterPrivHex = bytesToHex(privKey);
+      final voterPubHex = bytesToHex(pubKey);
+      debugPrint('Voter private key (hex): $voterPrivHex');
+      debugPrint('Voter public key (hex): $voterPubHex');
+
+      final der = base64.decode(election.rsaPubKey);
+      final ecPk = PublicKey.fromDer(der);
+
+      final nonce = CryptoService.generateNonce();
+      final hashed = CryptoService.hashNonce(nonce);
+      final result = CryptoService.blindNonce(hashed, ecPk);
+
+      await VoterSessionService.saveSession(nonce, result);
+
+      // Use the shared NostrService instance to avoid concurrent connection issues
+      final nostr = NostrService.instance;
+      await nostr.sendBlindSignatureRequestSafe(
+        ecPubKey: AppConfig.ecPublicKey,
+        electionId: election.id,
+        blindedNonce: result.blindMessage,
+        voterPrivKeyHex: voterPrivHex,
+        voterPubKeyHex: voterPubHex,
+      );
+    } catch (e) {
+      debugPrint('❌ Error requesting blind signature: $e');
+    }
   }
 }

@@ -8,7 +8,7 @@ import 'dart:convert';
 import 'dart:async';
 
 class ElectionProvider with ChangeNotifier {
-  final NostrService _nostrService = NostrService();
+  final NostrService _nostrService = NostrService.instance;
   StreamSubscription? _eventsSubscription;
   
   List<Election> _elections = [];
